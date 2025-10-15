@@ -38,18 +38,18 @@ public class Hooks {
 
     }
 
-//    @After
-//    public void tearDown(Scenario scenario) throws IOException {
-//        // Take screenshot if the scenario failed
-//        if (scenario.isFailed()) {
-//            File sourcePath = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
-//            byte[] fileContent = FileUtils.readFileToByteArray(sourcePath);
-//            scenario.attach(fileContent, "image/png", "image");
-//        }
-//        closeDriver();
-//
-////        if (driver != null)
-////            driver.quit();
-//    }
+   @After
+   public void tearDown(Scenario scenario) throws IOException {
+       // Take screenshot if the scenario failed
+       if (scenario.isFailed()) {
+           File sourcePath = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
+           byte[] fileContent = FileUtils.readFileToByteArray(sourcePath);
+           scenario.attach(fileContent, "image/png", "image");
+       }
+      // closeDriver();
+
+       if (driver != null)
+           driver.quit();
+   }
 
 }
