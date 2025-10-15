@@ -35,7 +35,7 @@ jobs:
 
     # Step 4: Install dependencies and run tests
     - name: Run BDD Tests
-      run: mvn clean test -Denv=dev -Dcucumber.filter.tags="@test" -B
+      run:  mvn clean test -B -DbrowserMode=headle -Dcucumber.filter.tags="@test6" -DthreadCount=10 -Denv=dev -Dbrowser=chrome
 
     # Step 5 (Optional): Publish reports
     - name: Upload Cucumber Reports
