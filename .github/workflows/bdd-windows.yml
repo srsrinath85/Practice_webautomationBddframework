@@ -13,33 +13,41 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # 1️⃣ Checkout code
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      # 1️⃣ Checkout code
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    # 2️⃣ Set up Java (match your project version)
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: 17
+      # 2️⃣ Set up Java (match your project version)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
-    # 3️⃣ Cache Maven dependencies
-    - name: Cache Maven packages
-      uses: actions/cache@v4
-      with:
-        path: C:\Users\runneradmin\.m2\repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-maven-
+      # 3️⃣ Cache Maven dependencies
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: C:\Users\runneradmin\.m2\repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
 
-    # 4️⃣ Run BDD Tests with your parameters
-    - name: Run BDD Tests
-      run: mvn clean test -B -DbrowserMode=headle -Dcucumber.filter.tags="@test6" -DthreadCount=10 -Denv=dev -Dbrowser=chrome
+      # 4️⃣ Run BDD Tests (fixed argument passing)
+      - name: Run BDD Tests
+        shell: bash
+        run: |
+          mvn clean test -B \
+            -D"browserMode=headle" \
+            -D"cucumber.filter.tags=@test6" \
+            -D"threadCount=10" \
+            -D"env=dev" \
+            -D"browser=chrome"
 
-    # 5️⃣ Upload Cucumber Reports
-    - name: Upload Cucumber Reports
-      uses: actions/upload-artifact@v4
-      with:
-        name: cucumber-reports
-        path: target\cucumber-reports
+      # 5️⃣ Upload reports (optional)
+      - name: Upload Cucumber Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-reports
+          path: target/cucumber-reports
