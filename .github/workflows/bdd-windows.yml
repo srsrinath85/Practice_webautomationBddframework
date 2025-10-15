@@ -1,4 +1,4 @@
-name: BDD Automation CI - Linux
+name: BDD Automation CI - Self-Hosted Windows
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   run-bdd-tests:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted   # This tells GitHub to run on your self-hosted Windows machine
 
     steps:
     # 1️⃣ Checkout repository
@@ -28,33 +28,31 @@ jobs:
     - name: Cache Maven packages
       uses: actions/cache@latest
       with:
-        path: ~/.m2/repository
+        path: C:\Users\runneradmin\.m2\repository
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
           ${{ runner.os }}-maven-
 
     # 4️⃣ Install Chrome (for Selenium)
-    - name: Install Google Chrome
+    - name: Ensure Google Chrome is installed
       run: |
-        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-        sudo apt update
-        sudo apt install -y google-chrome-stable
+        if not exist "C:\Program Files\Google\Chrome\Application\chrome.exe" (
+            Write-Host "Chrome not found! Please install Chrome manually on this machine."
+        )
 
-    # 5️⃣ Run BDD tests with Maven parameters
+    # 5️⃣ Run BDD tests with Maven
     - name: Run BDD Tests
       run: mvn clean test -B -DbrowserMode=headle -Dcucumber.filter.tags="@test6" -DthreadCount=10 -Denv=dev -Dbrowser=chrome
 
     # 6️⃣ Generate Cucumber HTML report
     - name: Generate Cucumber HTML report
       run: |
-        echo "Generating HTML report..."
-        if [ -f target/cucumber-reports/cucumber.json ]; then
-          mvn io.cucumber:cucumber-reporting-maven-plugin:report
-        else
-          echo "No cucumber.json found, skipping HTML report generation."
-        fi
+        if exist target\cucumber-reports\cucumber.json (
+            mvn io.cucumber:cucumber-reporting-maven-plugin:report
+        ) else (
+            echo "No cucumber.json found, skipping HTML report generation."
+        )
 
-    # 7️⃣ Show report folder
+    # 7️⃣ Show report folder in logs
     - name: Show report folder
-      run: ls -R target/cucumber-reports
+      run: dir target\cucumber-reports
