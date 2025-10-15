@@ -85,4 +85,4 @@ jobs:
             target/cucumber.json
             target/Reports/cucumber-report.json
             target/cucumber/
-            target/ExtentReports/
+            target/SparkReport/
