@@ -18,6 +18,6 @@ public class MyStepdefs {
 
     @Given("I open the browser")
     public void iOpenTheBrowser() {
-      driver.get(configLoader.getProperty("ur"));
+      driver.get(configLoader.getProperty("url"));
     }
 }
