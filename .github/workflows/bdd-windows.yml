@@ -1,4 +1,4 @@
-name: BDD Automation CI - Windows
+name: Run BDD Tests on Windows
 
 on:
   push:
@@ -7,75 +7,61 @@ on:
   pull_request:
     branches:
       - master
-
 jobs:
-  run-bdd-tests:
+  run-tests:
+    name: Run Selenium BDD Tests on Windows
     runs-on: windows-latest
 
     steps:
-      # 1️⃣ Checkout code
-      - name: Checkout Repository
+      # Step 1: Checkout your project
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up Java
-      - name: Set up JDK 17
+      # Step 2: Set up Java (adjust version if needed)
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: '17'
 
-      # 3️⃣ Install Google Chrome (latest)
-      - name: Install Google Chrome
-        run: choco install googlechrome --no-progress --ignore-checksums -y
-
-      # 4️⃣ Download matching ChromeDriver directly from Google
-      - name: Install Matching ChromeDriver
+      # Step 3: Ensure correct Chrome + ChromeDriver versions
+      - name: Install matching ChromeDriver
         shell: pwsh
         run: |
           $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+          if (-Not (Test-Path $chromePath)) {
+              choco install googlechrome --no-progress --yes
+          }
           $chromeVersion = (Get-Item $chromePath).VersionInfo.ProductVersion
-          $majorVersion = $chromeVersion.Split('.')[0]
           Write-Host "Detected Chrome version: $chromeVersion"
+          $majorVersion = $chromeVersion.Split('.')[0]
+          try {
+              choco install chromedriver --version="$majorVersion.0.0" --no-progress --yes
+          } catch {
+              Write-Host "Falling back to latest chromedriver..."
+              choco install chromedriver --no-progress --yes
+          }
 
-          $driverVersion = (Invoke-RestMethod "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json").versions |
-            Where-Object { $_.version -like "$majorVersion.*" } |
-            Select-Object -Last 1
-
-          $driverUrl = $driverVersion.downloads.chromedriver |
-            Where-Object { $_.platform -eq "win64" } |
-            Select-Object -ExpandProperty url
-
-          Write-Host "Downloading ChromeDriver from $driverUrl"
-          Invoke-WebRequest -Uri $driverUrl -OutFile chromedriver.zip
-          Expand-Archive chromedriver.zip -DestinationPath . -Force
-          Copy-Item ".\chromedriver-win64\chromedriver.exe" "C:\Windows\System32\" -Force
-          Remove-Item chromedriver.zip -Force
-          Write-Host "✅ ChromeDriver installed successfully"
-
-      # 5️⃣ Cache Maven dependencies
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: C:\Users\runneradmin\.m2\repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-
-      # 6️⃣ Run BDD Tests
-      - name: Run BDD Tests
-        shell: bash
+      # Step 4: Build and run tests
+      - name: Run Maven tests
         run: |
-          mvn clean test -B \
-            -D"browserMode=headle" \
-            -D"cucumber.filter.tags=@test6" \
-            -D"threadCount=10" \
-            -D"env=dev" \
-            -D"browser=chrome"
+          mvn clean test -B ^
+            -D"browser=chrome" ^
+            -D"env=dev" ^
+            -D"browserMode=headle" ^
+            -D"threadCount=10" ^
+            -D"cucumber.filter.tags=@test6"
 
-      # 7️⃣ Upload reports (optional)
-      - name: Upload Cucumber Reports
-        if: always()
+      # Step 5: Upload Maven Surefire & Extent reports
+      - name: Upload Test Reports
+        if: always() # upload even if tests fail
         uses: actions/upload-artifact@v4
         with:
-          name: cucumber-reports
-          path: target/cucumber-reports
+          name: Maven-Test-Reports
+          path: |
+            target/surefire-reports/
+            target/cucumber-reports/
+            target/SparkReport/
+            target/ExtentReports/
+            target/spark.html
+            target/extent.html
