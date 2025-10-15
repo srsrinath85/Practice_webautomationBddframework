@@ -1,4 +1,4 @@
-name: BDD Automation CI - Windows
+name: BDD Automation CI - Linux
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   run-bdd-tests:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
     # 1️⃣ Checkout repository
@@ -28,25 +28,33 @@ jobs:
     - name: Cache Maven packages
       uses: actions/cache@latest
       with:
-        path: C:\Users\runneradmin\.m2\repository
+        path: ~/.m2/repository
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
           ${{ runner.os }}-maven-
 
-    # 4️⃣ Run BDD tests with parameters
+    # 4️⃣ Install Chrome (for Selenium)
+    - name: Install Google Chrome
+      run: |
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        sudo apt update
+        sudo apt install -y google-chrome-stable
+
+    # 5️⃣ Run BDD tests with Maven parameters
     - name: Run BDD Tests
       run: mvn clean test -B -DbrowserMode=headle -Dcucumber.filter.tags="@test6" -DthreadCount=10 -Denv=dev -Dbrowser=chrome
 
-    # 5️⃣ Generate HTML report using Maven Cucumber plugin
+    # 6️⃣ Generate Cucumber HTML report
     - name: Generate Cucumber HTML report
       run: |
         echo "Generating HTML report..."
-        if exist target\cucumber-reports\cucumber.json (
-            mvn io.cucumber:cucumber-reporting-maven-plugin:report
-        ) else (
-            echo "No cucumber.json found, skipping HTML report generation."
-        )
+        if [ -f target/cucumber-reports/cucumber.json ]; then
+          mvn io.cucumber:cucumber-reporting-maven-plugin:report
+        else
+          echo "No cucumber.json found, skipping HTML report generation."
+        fi
 
-    # 6️⃣ Print report location in logs
-    - name: Show report path
-      run: dir target\cucumber-reports
+    # 7️⃣ Show report folder
+    - name: Show report folder
+      run: ls -R target/cucumber-reports
