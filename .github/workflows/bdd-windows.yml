@@ -13,15 +13,18 @@ jobs:
     runs-on: windows-latest
 
     steps:
+    # 1️⃣ Checkout code
     - name: Checkout Repository
       uses: actions/checkout@v3
 
+    # 2️⃣ Set up JDK 17
     - name: Set up JDK 17
       uses: actions/setup-java@v3
       with:
         distribution: temurin
         java-version: 17
 
+    # 3️⃣ Cache Maven dependencies
     - name: Cache Maven packages
       uses: actions/cache@v3
       with:
@@ -30,11 +33,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-maven-
 
+    # 4️⃣ Run BDD Tests
     - name: Run BDD Tests
       run: mvn clean test -B -DbrowserMode=headle -Dcucumber.filter.tags="@test6" -DthreadCount=10 -Denv=dev -Dbrowser=chrome
-
-    - name: Upload Cucumber Reports
-      uses: actions/upload-artifact@v4
-      with:
-        name: cucumber-reports
-        path: target\cucumber-reports
