@@ -73,9 +73,16 @@ jobs:
             -D"browser=chrome"
 
       # 7️⃣ Upload reports (optional)
-      - name: Upload Cucumber Reports
+      - name: List Target Directory
+        run: dir target
+
+      - name: Upload Test Reports 
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cucumber-reports
-          path: target/cucumber-reports
+          name: BDD-Test-Reports
+          path: |
+            target/cucumber.json
+            target/Reports/cucumber-report.json
+            target/cucumber/
+            target/ExtentReports/
