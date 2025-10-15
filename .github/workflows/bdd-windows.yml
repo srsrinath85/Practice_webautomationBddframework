@@ -1,12 +1,21 @@
 name: BDD Automation CI - Windows
 
 on:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Choose browser to run tests'
+        required: true
+        default: 'chrome'
+        type: choice
+        options:
+          - chrome
+          - firefox
+          - edge
+      tag:
+        description: 'Cucumber tag to run'
+        required: true
+        default: '@test6'
 
 jobs:
   run-bdd-tests:
@@ -24,33 +33,50 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # 3️⃣ Install Google Chrome (latest)
-      - name: Install Google Chrome
-        run: choco install googlechrome --no-progress --ignore-checksums -y
-
-      # 4️⃣ Download matching ChromeDriver directly from Google
-      - name: Install Matching ChromeDriver
+      # 3️⃣ Install selected browser
+      - name: Install Browser
         shell: pwsh
         run: |
-          $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-          $chromeVersion = (Get-Item $chromePath).VersionInfo.ProductVersion
-          $majorVersion = $chromeVersion.Split('.')[0]
-          Write-Host "Detected Chrome version: $chromeVersion"
+          $browser = "${{ github.event.inputs.browser }}"
+          Write-Host "Selected Browser: $browser"
+          switch ($browser) {
+              "chrome" { choco install googlechrome --no-progress --ignore-checksums -y }
+              "firefox" { choco install firefox --no-progress --ignore-checksums -y }
+              "edge" { choco install microsoft-edge --no-progress --ignore-checksums -y }
+          }
 
-          $driverVersion = (Invoke-RestMethod "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json").versions |
-            Where-Object { $_.version -like "$majorVersion.*" } |
-            Select-Object -Last 1
+      # 4️⃣ Install matching driver dynamically
+      - name: Install Browser Driver
+        shell: pwsh
+        run: |
+          $browser = "${{ github.event.inputs.browser }}"
+          if ($browser -eq "chrome") {
+              $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+              $chromeVersion = (Get-Item $chromePath).VersionInfo.ProductVersion
+              $majorVersion = $chromeVersion.Split('.')[0]
+              Write-Host "Detected Chrome version: $chromeVersion"
 
-          $driverUrl = $driverVersion.downloads.chromedriver |
-            Where-Object { $_.platform -eq "win64" } |
-            Select-Object -ExpandProperty url
+              $driverVersion = (Invoke-RestMethod "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json").versions |
+                Where-Object { $_.version -like "$majorVersion.*" } |
+                Select-Object -Last 1
 
-          Write-Host "Downloading ChromeDriver from $driverUrl"
-          Invoke-WebRequest -Uri $driverUrl -OutFile chromedriver.zip
-          Expand-Archive chromedriver.zip -DestinationPath . -Force
-          Copy-Item ".\chromedriver-win64\chromedriver.exe" "C:\Windows\System32\" -Force
-          Remove-Item chromedriver.zip -Force
-          Write-Host "✅ ChromeDriver installed successfully"
+              $driverUrl = $driverVersion.downloads.chromedriver |
+                Where-Object { $_.platform -eq "win64" } |
+                Select-Object -ExpandProperty url
+
+              Write-Host "Downloading ChromeDriver from $driverUrl"
+              Invoke-WebRequest -Uri $driverUrl -OutFile chromedriver.zip
+              Expand-Archive chromedriver.zip -DestinationPath . -Force
+              Copy-Item ".\chromedriver-win64\chromedriver.exe" "C:\Windows\System32\" -Force
+              Remove-Item chromedriver.zip -Force
+          }
+          elseif ($browser -eq "firefox") {
+              choco install geckodriver --no-progress -y
+          }
+          elseif ($browser -eq "edge") {
+              choco install msedgedriver --no-progress -y
+          }
+          Write-Host "✅ Browser driver installed successfully"
 
       # 5️⃣ Cache Maven dependencies
       - name: Cache Maven packages
@@ -61,22 +87,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      # 6️⃣ Run BDD Tests
+      # 6️⃣ Run BDD Tests with dynamic browser and tag
       - name: Run BDD Tests
         shell: bash
         run: |
           mvn clean test -B \
             -D"browserMode=headle" \
-            -D"cucumber.filter.tags=@test6" \
+            -D"cucumber.filter.tags=${{ github.event.inputs.tag }}" \
             -D"threadCount=10" \
             -D"env=dev" \
-            -D"browser=chrome"
+            -D"browser=${{ github.event.inputs.browser }}"
 
-      # 7️⃣ Upload reports (optional)
+      # 7️⃣ List target directory (debug)
       - name: List Target Directory
         run: dir target
 
-      - name: Upload Test Reports 
+      # 8️⃣ Upload all reports
+      - name: Upload Test Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -85,4 +112,5 @@ jobs:
             target/cucumber.json
             target/Reports/cucumber-report.json
             target/cucumber/
+            target/ExtentReports/
             target/SparkReport/
