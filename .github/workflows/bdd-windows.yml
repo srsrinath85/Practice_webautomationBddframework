@@ -33,10 +33,20 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-maven-
 
-    # 4️⃣ Run BDD tests with your parameters
+    # 4️⃣ Run BDD tests with parameters
     - name: Run BDD Tests
       run: mvn clean test -B -DbrowserMode=headle -Dcucumber.filter.tags="@test6" -DthreadCount=10 -Denv=dev -Dbrowser=chrome
 
-    # 5️⃣ Print test results (optional)
-    - name: Print Cucumber results
+    # 5️⃣ Generate HTML report using Maven Cucumber plugin
+    - name: Generate Cucumber HTML report
+      run: |
+        echo "Generating HTML report..."
+        if exist target\cucumber-reports\cucumber.json (
+            mvn io.cucumber:cucumber-reporting-maven-plugin:report
+        ) else (
+            echo "No cucumber.json found, skipping HTML report generation."
+        )
+
+    # 6️⃣ Print report location in logs
+    - name: Show report path
       run: dir target\cucumber-reports
