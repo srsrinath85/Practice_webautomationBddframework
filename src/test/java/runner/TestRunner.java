@@ -8,7 +8,8 @@ import org.testng.annotations.DataProvider;
 import io.cucumber.testng.AbstractTestNGCucumberTests;
 import io.cucumber.testng.CucumberOptions;
 
-@CucumberOptions(glue = { "scenarios",
+@CucumberOptions(plugin = { "pretty", "json:target/cucumber.json", "json:target/Reports/cucumber-report.json",
+        "html:target/cucumber/cucumber.html", "com.aventstack.extentreports.cucumber.adapter.ExtentCucumberAdapter:"},glue = { "scenarios",
                 "hooks" }, features = "src/test/java/scenarios")
 public class TestRunner extends AbstractTestNGCucumberTests {
 
