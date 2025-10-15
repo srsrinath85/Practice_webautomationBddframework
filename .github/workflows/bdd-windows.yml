@@ -1,4 +1,4 @@
-name: BDD Automation CI - Self-Hosted Windows
+name: BDD Automation CI
 
 on:
   push:
@@ -9,50 +9,37 @@ on:
       - master
 
 jobs:
-  run-bdd-tests:
-    runs-on: self-hosted   # This tells GitHub to run on your self-hosted Windows machine
+  build-and-test:
+    runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Checkout repository
-    - name: Checkout Repository
-      uses: actions/checkout@latest
+    # Step 1: Checkout repo
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-    # 2️⃣ Set up JDK
+    # Step 2: Set up JDK
     - name: Set up JDK 17
-      uses: actions/setup-java@latest
+      uses: actions/setup-java@v4
       with:
-        distribution: temurin
-        java-version: 17
+        java-version: '17'
+        distribution: 'temurin'
 
-    # 3️⃣ Cache Maven dependencies
+    # Step 3: Cache Maven dependencies (speeds up builds)
     - name: Cache Maven packages
-      uses: actions/cache@latest
+      uses: actions/cache@v4
       with:
-        path: C:\Users\runneradmin\.m2\repository
+        path: ~/.m2/repository
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
           ${{ runner.os }}-maven-
 
-    # 4️⃣ Install Chrome (for Selenium)
-    - name: Ensure Google Chrome is installed
-      run: |
-        if not exist "C:\Program Files\Google\Chrome\Application\chrome.exe" (
-            Write-Host "Chrome not found! Please install Chrome manually on this machine."
-        )
-
-    # 5️⃣ Run BDD tests with Maven
+    # Step 4: Install dependencies and run tests
     - name: Run BDD Tests
-      run: mvn clean test -B -DbrowserMode=headle -Dcucumber.filter.tags="@test6" -DthreadCount=10 -Denv=dev -Dbrowser=chrome
+      run: mvn clean test -Denv=dev -Dcucumber.filter.tags="@test" -B
 
-    # 6️⃣ Generate Cucumber HTML report
-    - name: Generate Cucumber HTML report
-      run: |
-        if exist target\cucumber-reports\cucumber.json (
-            mvn io.cucumber:cucumber-reporting-maven-plugin:report
-        ) else (
-            echo "No cucumber.json found, skipping HTML report generation."
-        )
-
-    # 7️⃣ Show report folder in logs
-    - name: Show report folder
-      run: dir target\cucumber-reports
+    # Step 5 (Optional): Publish reports
+    - name: Upload Cucumber Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: cucumber-reports
+        path: target/cucumber-reports
